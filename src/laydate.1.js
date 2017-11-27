@@ -369,16 +369,6 @@
     ,value: null //默认日期，支持传入new Date()，或者符合format参数设定的日期格式字符
     ,min: '1900-1-1' //有效最小日期，年月日必须用“-”分割，时分秒必须用“:”分割。注意：它并不是遵循 format 设定的格式。
     ,max: '2099-12-31' //有效最大日期，同上
-    ,usefulDate: {
-      reg: false,
-      exp: '',
-      list: []
-    }  // 有效的日期
-    ,uselessDate: {
-      reg: false,
-      exp: '',
-      list: []
-    } // 无效的日期
     ,trigger: 'focus' //呼出控件的事件
     ,show: false //是否直接显示，如果设置true，则默认直接显示控件
     ,showBottom: true //是否显示底部栏
@@ -516,7 +506,6 @@
     
     //获取限制内日期
     lay.each(['min', 'max'], function(i, item){
-      console.log(i, item);
       var ymd = [], hms = [];
       if(typeof options[item] === 'number'){ //如果为数字
         var day = options[item]
@@ -530,7 +519,6 @@
         ymd = [thisDate.getFullYear(), thisDate.getMonth() + 1, thisDate.getDate()];
         day < STAMP || (hms = [thisDate.getHours(), thisDate.getMinutes(), thisDate.getSeconds()]);
       } else {
-        console.log(1);
         ymd = (options[item].match(/\d+-\d+-\d+/) || [''])[0].split('-');
         hms = (options[item].match(/\d+:\d+:\d+/) || [''])[0].split(':');
       }
@@ -542,15 +530,6 @@
         ,minutes: hms[1] | 0
         ,seconds: hms[2] | 0
       };
-    });
-    // console.log(options);
-
-    console.log(options);
-    options.uselessDate.timestrapList = [];
-    lay.each(options.uselessDate.list, function(i, item) {
-      // console.log(item)
-      options.uselessDate.timestrapList.push((new Date(item + ' 0:0:0')).getTime());
-      
     });
     
     that.elemID = 'layui-laydate'+ options.elem.attr('lay-key');
@@ -656,7 +635,6 @@
         divHeader.appendChild(item);
       });
       
-      // console.log(theadTr);
        //生成表格
       thead.appendChild(theadTr);
       lay.each(new Array(6), function(i){ //表体
@@ -670,20 +648,16 @@
           tr.insertCell(j);
         });
       });
-      // console.log(table.children[0].innerHTML);
       table.insertBefore(thead, table.children[0]); //表头
-      // console.log(table)
       divContent.appendChild(table);
       
       elemMain[i] = lay.elem('div', {
         'class': 'layui-laydate-main laydate-main-list-'+ i
       });
       
-      // console.log(divContent.innerHTML)
       elemMain[i].appendChild(divHeader);
       elemMain[i].appendChild(divContent);
       
-      console.log(table.innerHTML)
       elemHeader.push(headerChild);
       elemCont.push(divContent);
       elemTable.push(table);
@@ -981,8 +955,6 @@
   
   //无效日期范围的标记
   Class.prototype.limit = function(elem, date, index, time){
-    console.log(this.config);
-
     var that = this
     ,options = that.config, timestrap = {}
     ,dateTime = options[index > 41 ? 'endDate' : 'dateTime']
@@ -1005,11 +977,8 @@
       }())).getTime();  //time：是否比较时分秒
     });
     
-    console.log(this.config.uselessDate.timestrapList.indexOf(timestrap.now))
-    isOut = this.config.uselessDate.timestrapList.indexOf(timestrap.now) ===0 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
-    
+    isOut = timestrap.now < timestrap.min || timestrap.now > timestrap.max;
     elem && elem[isOut ? 'addClass' : 'removeClass'](DISABLED);
-    console.log(elem, date, index, time, isOut);
     return isOut;
   };
   
