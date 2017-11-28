@@ -13,10 +13,15 @@
     <script>
         laydate.render({
             elem: '#test1',
+            value: '2017-11-30', //必须遵循format参数设定的格式
             min: '2017-11-10',
-            max: '2017-11-15',
+            max: '2017-11-20',
             uselessDate: {
-                list: ['2017-11-11']
+                list: ['2017-11-11', '2017-11-13', '2017-11-15']
+            },
+            btns: ['last'],
+            done: function (data) {
+                alert(data)
             }
         });
     </script>

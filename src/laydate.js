@@ -2,6 +2,7 @@
  
  @Name : layDate 5.0.85 日期时间控件
  @Author: 贤心
+ @change: kuckboy1994
  @Site：http://www.layui.com/laydate/
  @License：MIT
  
@@ -360,6 +361,14 @@
   Class.isLeapYear = function(year){
     return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
   };
+
+  Class.preDate = function (timeStamp) {
+    return (new Date(timeStamp - 24*60*60*1000)).getTime();
+  }
+
+  Class.nextDate = function (timeStamp) {
+    return (new Date(timeStamp + 24*60*60*1000)).getTime();
+  }
   
   //默认配置
   Class.prototype.config = {
@@ -369,14 +378,7 @@
     ,value: null //默认日期，支持传入new Date()，或者符合format参数设定的日期格式字符
     ,min: '1900-1-1' //有效最小日期，年月日必须用“-”分割，时分秒必须用“:”分割。注意：它并不是遵循 format 设定的格式。
     ,max: '2099-12-31' //有效最大日期，同上
-    ,usefulDate: {
-      reg: false,
-      exp: '',
-      list: []
-    }  // 有效的日期
     ,uselessDate: {
-      reg: false,
-      exp: '',
       list: []
     } // 无效的日期
     ,trigger: 'focus' //呼出控件的事件
@@ -410,6 +412,7 @@
           confirm: '确定'
           ,clear: '清空'
           ,now: '现在'
+          ,last: '最近'
         }
       }
       ,en: {
@@ -424,6 +427,7 @@
           confirm: 'Confirm'
           ,clear: 'Clear'
           ,now: 'Now'
+          ,last: 'last'
         }
       }
     };
@@ -516,7 +520,6 @@
     
     //获取限制内日期
     lay.each(['min', 'max'], function(i, item){
-      console.log(i, item);
       var ymd = [], hms = [];
       if(typeof options[item] === 'number'){ //如果为数字
         var day = options[item]
@@ -530,7 +533,6 @@
         ymd = [thisDate.getFullYear(), thisDate.getMonth() + 1, thisDate.getDate()];
         day < STAMP || (hms = [thisDate.getHours(), thisDate.getMinutes(), thisDate.getSeconds()]);
       } else {
-        console.log(1);
         ymd = (options[item].match(/\d+-\d+-\d+/) || [''])[0].split('-');
         hms = (options[item].match(/\d+:\d+:\d+/) || [''])[0].split(':');
       }
@@ -543,14 +545,11 @@
         ,seconds: hms[2] | 0
       };
     });
-    // console.log(options);
 
-    console.log(options);
+    // 计算出无用的时间戳
     options.uselessDate.timestrapList = [];
     lay.each(options.uselessDate.list, function(i, item) {
-      // console.log(item)
       options.uselessDate.timestrapList.push((new Date(item + ' 0:0:0')).getTime());
-      
     });
     
     that.elemID = 'layui-laydate'+ options.elem.attr('lay-key');
@@ -656,7 +655,6 @@
         divHeader.appendChild(item);
       });
       
-      // console.log(theadTr);
        //生成表格
       thead.appendChild(theadTr);
       lay.each(new Array(6), function(i){ //表体
@@ -670,20 +668,16 @@
           tr.insertCell(j);
         });
       });
-      // console.log(table.children[0].innerHTML);
       table.insertBefore(thead, table.children[0]); //表头
-      // console.log(table)
       divContent.appendChild(table);
       
       elemMain[i] = lay.elem('div', {
         'class': 'layui-laydate-main laydate-main-list-'+ i
       });
       
-      // console.log(divContent.innerHTML)
       elemMain[i].appendChild(divHeader);
       elemMain[i].appendChild(divContent);
       
-      console.log(table.innerHTML)
       elemHeader.push(headerChild);
       elemCont.push(divContent);
       elemTable.push(table);
@@ -981,8 +975,6 @@
   
   //无效日期范围的标记
   Class.prototype.limit = function(elem, date, index, time){
-    console.log(this.config);
-
     var that = this
     ,options = that.config, timestrap = {}
     ,dateTime = options[index > 41 ? 'endDate' : 'dateTime']
@@ -1005,11 +997,9 @@
       }())).getTime();  //time：是否比较时分秒
     });
     
-    console.log(this.config.uselessDate.timestrapList.indexOf(timestrap.now))
-    isOut = this.config.uselessDate.timestrapList.indexOf(timestrap.now) ===0 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
+    isOut = this.config.uselessDate.timestrapList.indexOf(timestrap.now) !== -1 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
     
     elem && elem[isOut ? 'addClass' : 'removeClass'](DISABLED);
-    console.log(elem, date, index, time, isOut);
     return isOut;
   };
   
@@ -1654,6 +1644,52 @@
         that.done();
         that.setValue(that.parse()).remove()
       }
+
+      ,last: function () {
+        var thisDate = new Date();
+        var maxDate = new Date(that.config.max.year + '-'
+                                + (that.config.max.month + 1) + '-'
+                                + that.config.max.date + ' '
+                                + that.config.max.hours + ':'
+                                + that.config.max.minutes + ':'
+                                + that.config.max.seconds).getTime();
+        var minDate = new Date(that.config.min.year + '-'
+                                + (that.config.min.month + 1) + '-'
+                                + that.config.min.date + ' '
+                                + that.config.min.hours + ':'
+                                + that.config.min.minutes + ':'
+                                + that.config.min.seconds).getTime();
+        var tempDate, mydate;
+
+        if (that.config.uselessDate.timestrapList.indexOf(maxDate) === -1) {
+          lay.extend(dateTime, that.config.max, {});
+        } else {
+          tempDate = that.constructor.preDate(maxDate);
+          while (1) {
+            if (tempDate < minDate) {
+              break;
+            }
+            if (that.config.uselessDate.timestrapList.indexOf(tempDate) === -1) {
+              mydate = new Date(tempDate);
+              lay.extend(dateTime, {
+                year: mydate.getFullYear() //年
+                ,month: mydate.getMonth() //月
+                ,date: mydate.getDate() //日
+                ,hours: 0 //时
+                ,minutes: 0 //分
+                ,seconds: 0 //秒
+              }, {});
+              break;
+            } else {
+              tempDate = that.constructor.preDate(tempDate);
+            }
+          }
+        }
+
+        that.setValue(that.parse()).remove();
+        isStatic && that.calendar();
+        that.done();
+      }
     };
     active[type] && active[type]();
   };
@@ -1789,6 +1825,7 @@
     
     //点击底部按钮
     lay(that.footer).find('span').on('click', function(){
+      
       var type = lay(this).attr('lay-type');
       that.tool(this, type);
     });
