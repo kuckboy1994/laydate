@@ -1,9 +1,7 @@
 /**
  
  @Name : layDate 5.0.85 日期时间控件
- @Author: 贤心
  @change: kuckboy1994
- @Site：http://www.layui.com/laydate/
  @License：MIT
  
  */
@@ -378,9 +376,13 @@
     ,value: null //默认日期，支持传入new Date()，或者符合format参数设定的日期格式字符
     ,min: '1900-1-1' //有效最小日期，年月日必须用“-”分割，时分秒必须用“:”分割。注意：它并不是遵循 format 设定的格式。
     ,max: '2099-12-31' //有效最大日期，同上
+    ,useFlag: 'useless' // 默认是useless 可选参数 useful
     ,uselessDate: {
       list: []
     } // 无效的日期
+    ,usefulDate: {
+      list: []
+    } // 有效的日期
     ,trigger: 'focus' //呼出控件的事件
     ,show: false //是否直接显示，如果设置true，则默认直接显示控件
     ,showBottom: true //是否显示底部栏
@@ -546,11 +548,31 @@
       };
     });
 
-    // 计算出无用的时间戳
-    options.uselessDate.timestrapList = [];
-    lay.each(options.uselessDate.list, function(i, item) {
-      options.uselessDate.timestrapList.push((new Date(item + ' 0:0:0')).getTime());
-    });
+    if (options.useFlag.toLowerCase() === "useless") {
+      // 计算出无用的时间戳
+      options.uselessDate.timestrapList = [];
+      lay.each(options.uselessDate.list, function(i, item) {
+        options.uselessDate.timestrapList.push((new Date(item + ' 0:0:0')).getTime());
+      });
+    } else {
+      // 计算出有用的时间戳
+      options.usefulDate.timestrapList = [];
+      lay.each(options.usefulDate.list, function(i, item) {
+        options.usefulDate.timestrapList.push((new Date(item + ' 0:0:0')).getTime());
+      });
+
+      var mind = (new Date(options.min.year + '-' + (options.min.month+1) + '-' + options.min.date + ' ' + options.min.hours + ':' + options.min.minutes + ':' + options.min.seconds)).getTime();
+      var maxd = (new Date(options.max.year + '-' + (options.max.month+1) + '-' + options.max.date + ' ' + options.max.hours + ':' + options.max.minutes + ':' + options.max.seconds)).getTime();
+      console.log(options.min, options.max);
+
+      options.uselessDate.timestrapList = [];
+      for (var i = mind; i <= maxd; i += (24*60*60*1000)) {
+        if (options.usefulDate.timestrapList.indexOf(i) === -1) {
+          options.uselessDate.timestrapList.push(i)
+        }
+      }
+    }
+    
     
     that.elemID = 'layui-laydate'+ options.elem.attr('lay-key');
     
@@ -975,6 +997,7 @@
   
   //无效日期范围的标记
   Class.prototype.limit = function(elem, date, index, time){
+    console.log(elem, date, index, time)
     var that = this
     ,options = that.config, timestrap = {}
     ,dateTime = options[index > 41 ? 'endDate' : 'dateTime']
@@ -996,8 +1019,44 @@
         return hms;
       }())).getTime();  //time：是否比较时分秒
     });
-    
-    isOut = this.config.uselessDate.timestrapList.indexOf(timestrap.now) !== -1 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
+
+    // 判断渲染月份页面
+    if (date !== null && typeof date.type !== 'undefined' && date.type === 'month') {
+      var mf = (new Date(date.year + '-' + (date.month+1) + '-' + '1 0:0:0')).getTime();
+      if (date.month+2 >= 13) {
+        var nmf = (new Date((date.year+1) + '-1-1 0:0:0')).getTime();
+      } else {
+        var nmf = (new Date(date.year + '-' + (date.month+2) + '-' + '1 0:0:0')).getTime();
+      }
+      isOut = true;
+      for (var i = mf; i < nmf; i += 86400000 ) {
+        var temp = this.config.uselessDate.timestrapList.indexOf(i) !== -1 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
+        if (temp === false) {
+          isOut = false;
+          break;
+        }
+      }
+    } else if (date !== null && typeof date.type !== 'undefined' && date.type === 'year') { // 判断渲染年
+      var yf = (new Date(date.year + '-1-1 0:0:0')).getTime();
+      var ye = (new Date(date.year + '-12-31 0:0:0')).getTime();
+      var mind = (new Date(options.min.year + '-' + (options.min.month+1) + '-' + options.min.date + ' ' + options.min.hours + ':' + options.min.minutes + ':' + options.min.seconds)).getTime();
+      var maxd = (new Date(options.max.year + '-' + (options.max.month+1) + '-' + options.max.date + ' ' + options.max.hours + ':' + options.max.minutes + ':' + options.max.seconds)).getTime();
+
+      isOut = true;
+
+      if (!(ye < mind || yf > maxd)) {
+        for (var i = yf; i <= ye; i += 86400000 ) {
+          var temp = this.config.uselessDate.timestrapList.indexOf(i) !== -1 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
+          if (temp === false) {
+            isOut = false;
+            break;
+          }
+        }
+      } 
+      
+    } else {  // 其他
+      isOut = this.config.uselessDate.timestrapList.indexOf(timestrap.now) !== -1 || timestrap.now < timestrap.min || timestrap.now > timestrap.max;
+    }
     
     elem && elem[isOut ? 'addClass' : 'removeClass'](DISABLED);
     return isOut;
@@ -1163,6 +1222,7 @@
           ymd.month = options.max.month;
           ymd.date = options.max.date;
         }
+        ymd.type = 'year';
         that.limit(lay(li), ymd, index);
         yearNum++;
       });
@@ -1177,10 +1237,11 @@
         li.innerHTML = lang.month[i] + (isCN ? '月' : '');
         ul.appendChild(li);
         if(listYM[0] < that.firstDate.year){
-          ymd.date = options.min.date;
+          ymd.date = options.min.date > options.max.date ? options.min.date : options.max.date;
         } else if(listYM[0] >= that.firstDate.year){
-          ymd.date = options.max.date;
+          ymd.date = options.max.date > options.min.date ? options.max.date : options.min.date;
         }
+        ymd.type = 'month';
         that.limit(lay(li), ymd, index);
       });
       lay(elemYM[isCN ? 0 : 1]).attr('lay-ym', listYM[0] + '-' + listYM[1])
@@ -1661,30 +1722,28 @@
                                 + that.config.min.seconds).getTime();
         var tempDate, mydate;
 
-        if (that.config.uselessDate.timestrapList.indexOf(maxDate) === -1) {
-          lay.extend(dateTime, that.config.max, {});
-        } else {
-          tempDate = that.constructor.preDate(maxDate);
-          while (1) {
-            if (tempDate < minDate) {
-              break;
-            }
-            if (that.config.uselessDate.timestrapList.indexOf(tempDate) === -1) {
-              mydate = new Date(tempDate);
-              lay.extend(dateTime, {
-                year: mydate.getFullYear() //年
-                ,month: mydate.getMonth() //月
-                ,date: mydate.getDate() //日
-                ,hours: 0 //时
-                ,minutes: 0 //分
-                ,seconds: 0 //秒
-              }, {});
-              break;
-            } else {
-              tempDate = that.constructor.preDate(tempDate);
-            }
+        tempDate = maxDate;
+        while (1) {
+          if (tempDate < minDate) {
+            break;
+          }
+          if (that.config.uselessDate.timestrapList.indexOf(tempDate) === -1) {
+            mydate = new Date(tempDate);
+            lay.extend(dateTime, {
+              year: mydate.getFullYear() //年
+              ,month: mydate.getMonth() //月
+              ,date: mydate.getDate() //日
+              ,hours: 0 //时
+              ,minutes: 0 //分
+              ,seconds: 0 //秒
+            }, {});
+            break;
+          } else {
+            tempDate = that.constructor.preDate(tempDate);
           }
         }
+
+        
 
         that.setValue(that.parse()).remove();
         isStatic && that.calendar();

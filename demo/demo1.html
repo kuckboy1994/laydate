@@ -8,20 +8,22 @@
 </head>
 <body>
     <input type="text" id="test1">
-    <!--<script src="../src/laydate.js"></script>-->
+    <!--<script src="../src/laydate-o.js"></script>-->
     <script src="../dist/laydate.js"></script>
     <script>
         laydate.render({
             elem: '#test1',
-            value: '2017-11-30', //必须遵循format参数设定的格式
-            min: '2017-11-10',
+            value: '2016-11-20', //必须遵循format参数设定的格式
+            min: '2016-2-28',
             max: '2017-11-20',
             uselessDate: {
                 list: ['2017-11-11', '2017-11-13', '2017-11-15']
             },
             btns: ['last'],
+            theme: 'dark',
             done: function (data) {
-                alert(data)
+                console.log(this);
+                // alert(data)
             }
         });
     </script>
